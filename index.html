@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Como criamos personagens e seus desdobramentos — Blanc Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,400&family=Work+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#faf6ef;
+    --paper:#f2ebe0;
+    --taupe:#a9987f;
+    --taupe-dark:#8a7a63;
+    --ink:#241f1a;
+    --ink-soft:#5c534a;
+    --line:#ddd2bf;
+    --accent:#b5654a;
+    --white:#ffffff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    font-family:'Work Sans', sans-serif;
+    background:var(--cream);
+    color:var(--ink);
+    line-height:1.65;
+    font-weight:300;
+    overflow-x:hidden;
+  }
+  h1,h2,h3,.serif{font-family:'Fraunces', serif;font-weight:400;}
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11.5px;
+    letter-spacing:0.22em;
+    text-transform:uppercase;
+    color:var(--taupe-dark);
+    margin-bottom:16px;
+    display:inline-block;
+  }
+  #progress{
+    position:fixed;top:0;left:0;height:2px;background:var(--accent);
+    width:0%;z-index:1000;transition:width 0.08s linear;
+  }
+  header.topbar{
+    position:fixed;top:0;left:0;right:0;z-index:900;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:22px 6vw;
+    color:var(--ink);
+    pointer-events:none;
+  }
+  header.topbar .wordmark{font-family:'Fraunces', serif;font-size:15px;letter-spacing:0.08em;}
+  header.topbar .tag{
+    font-family:'JetBrains Mono', monospace;font-size:10px;letter-spacing:0.15em;
+    text-transform:uppercase;opacity:0.6;
+  }
+
+  .dotnav{
+    position:fixed;right:26px;top:50%;transform:translateY(-50%);
+    z-index:950;display:flex;flex-direction:column;gap:14px;
+  }
+  .dotnav a{
+    width:7px;height:7px;border-radius:50%;background:var(--taupe);
+    opacity:0.4;display:block;transition:all 0.3s ease;
+  }
+  .dotnav a.active{opacity:1;background:var(--accent);transform:scale(1.5);}
+  @media (max-width:860px){ .dotnav{display:none;} }
+
+  section{position:relative;padding:min(7vw,76px) 8vw;max-width:1180px;margin:0 auto;}
+  section.narrow{max-width:760px;}
+
+  /* HERO — clean, typographic, cursor-reveal */
+  .hero{
+    max-width:100%;min-height:92vh;padding:0 8vw;
+    display:flex;flex-direction:column;justify-content:center;
+    position:relative;overflow:hidden;background:var(--cream);
+    border-bottom:1px solid var(--line);
+  }
+  .hero-inner{position:relative;z-index:2;max-width:780px;}
+  .hero h1{font-size:clamp(32px, 5vw, 60px);line-height:1.12;font-weight:400;color:var(--ink);}
+  .hero p.sub{
+    margin-top:24px;font-size:clamp(15px,1.5vw,18px);max-width:52ch;
+    font-weight:300;color:var(--ink-soft);
+  }
+  .hover-trigger{
+    color:var(--ink);border-bottom:1.5px dotted var(--taupe-dark);
+    cursor:default;font-weight:500;
+  }
+  #cursor-preview{
+    position:fixed;width:210px;height:270px;background-size:cover;background-position:center;
+    pointer-events:none;z-index:2000;opacity:0;transform:scale(0.94) rotate(-1.5deg);
+    transition:opacity 0.3s ease, transform 0.3s ease;border-radius:1px;
+    box-shadow:0 24px 60px rgba(36,31,26,0.28);
+  }
+  #cursor-preview.show{opacity:1;transform:scale(1) rotate(-1.5deg);}
+  .scrolldown{
+    position:absolute;bottom:34px;left:8vw;z-index:2;
+    font-family:'JetBrains Mono', monospace;font-size:10px;letter-spacing:0.2em;
+    color:var(--taupe-dark);text-transform:uppercase;display:flex;align-items:center;gap:10px;
+  }
+  .scrolldown .line{width:32px;height:1px;background:var(--taupe-dark);display:inline-block;}
+
+  .reveal{transition:opacity 0.8s ease, transform 0.8s ease;}
+  .reveal.pending{opacity:0;transform:translateY(24px);}
+  .reveal.in{opacity:1;transform:translateY(0);}
+
+  .section-head{margin-bottom:32px;}
+  h2.section-title{font-size:clamp(24px,3vw,38px);max-width:18ch;}
+
+  p.lede{font-size:clamp(15.5px,1.6vw,18px);color:var(--ink-soft);max-width:62ch;font-weight:300;}
+  p.lede + p.lede{margin-top:14px;}
+
+  .note{
+    margin-top:20px;padding:16px 20px;border-left:2px solid var(--taupe);
+    font-size:13px;color:var(--ink-soft);font-style:italic;max-width:56ch;background:var(--paper);
+  }
+
+  .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);margin-top:8px;}
+  .step{background:var(--cream);padding:28px 22px;min-height:190px;display:flex;flex-direction:column;justify-content:space-between;}
+  .step .num{font-family:'JetBrains Mono', monospace;font-size:12px;color:var(--accent);letter-spacing:0.1em;}
+  .step h3{font-size:18px;margin-top:18px;font-weight:400;}
+  .step p{font-size:13.5px;color:var(--ink-soft);margin-top:8px;font-weight:300;}
+
+  .framework{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:30px;}
+  .fw-card{border:1px solid var(--line);padding:34px 28px;background:var(--white);}
+  .fw-card .fnum{font-family:'JetBrains Mono',monospace;font-size:24px;color:var(--line);}
+  .fw-card h4{font-family:'Fraunces',serif;font-size:20px;margin-top:16px;font-weight:500;}
+  .fw-card p{font-size:14px;color:var(--ink-soft);margin-top:10px;}
+
+  .character{display:grid;grid-template-columns:0.9fr 1.1fr;gap:52px;align-items:center;}
+  .character.reverse .char-img{order:2;}
+  .character.reverse .char-text{order:1;}
+  .char-img img{width:100%;display:block;border-radius:2px;}
+  .char-text .name{font-size:clamp(28px,3.4vw,44px);margin-bottom:14px;}
+  .char-text p{color:var(--ink-soft);font-size:15px;font-weight:300;max-width:48ch;}
+
+  .prompt-box{
+    margin-top:20px;background:var(--ink);color:#e7ded0;padding:24px 26px;
+    font-family:'JetBrains Mono', monospace;font-size:12.5px;line-height:1.85;
+    border-radius:2px;max-width:100%;
+  }
+  .prompt-box .label{display:block;color:var(--accent);font-size:10px;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:12px;}
+  .prompt-box p{margin-top:10px;}
+  .prompt-box p:first-of-type{margin-top:0;}
+  .prompt-caption{margin-top:10px;font-size:11.5px;color:var(--taupe-dark);font-style:italic;}
+
+  /* framework-labeled short prompt */
+  .prompt-fw{
+    margin-top:20px;background:var(--ink);color:#e7ded0;padding:24px 26px;
+    font-family:'JetBrains Mono', monospace;font-size:12px;line-height:1.7;border-radius:2px;
+  }
+  .prompt-fw .label{display:block;color:var(--accent);font-size:10px;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:14px;}
+  .prompt-fw .pf-row{margin-bottom:11px;}
+  .prompt-fw .pf-row:last-child{margin-bottom:0;}
+  .prompt-fw .pf-label{color:var(--accent);text-transform:uppercase;letter-spacing:0.1em;font-size:10px;display:block;margin-bottom:2px;}
+
+  /* pose grid */
+  .pose-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:32px;}
+  .pose-grid img, .sb-sheet img{width:100%;display:block;border-radius:2px;background:var(--paper);}
+  .pose-grid img{aspect-ratio:3/4;object-fit:cover;}
+  .pose-name{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--taupe-dark);margin-top:14px;}
+  .sb-sheet{margin-top:26px;}
+
+  video.finalvid{width:100%;display:block;background:#000;}
+  .video-pair{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:32px;}
+  .video-pair .vcard{background:var(--ink);position:relative;}
+  .video-pair video{width:100%;display:block;aspect-ratio:3/4;object-fit:cover;}
+  .video-pair .vlabel{
+    position:absolute;bottom:0;left:0;right:0;padding:16px 18px;
+    background:linear-gradient(0deg, rgba(0,0,0,0.65), transparent);
+    color:#f3ece0;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;
+  }
+
+  .results-grid{display:grid;grid-template-columns:repeat(6,1fr);grid-auto-rows:150px;gap:6px;margin-top:30px;}
+  .results-grid img{width:100%;height:100%;object-fit:cover;display:block;}
+  .results-grid .g1{grid-column:span 2;grid-row:span 2;}
+  .results-grid .g2{grid-column:span 2;grid-row:span 1;}
+  .results-grid .g3{grid-column:span 2;grid-row:span 1;}
+  .results-grid .g4{grid-column:span 2;grid-row:span 2;}
+  .results-grid .g5{grid-column:span 2;grid-row:span 1;}
+  .results-grid .g6{grid-column:span 2;grid-row:span 1;}
+  .results-grid .g7{grid-column:span 3;grid-row:span 2;}
+  .results-grid .g8{grid-column:span 3;grid-row:span 2;}
+
+  footer{background:var(--ink);color:var(--paper);padding:min(9vw,90px) 8vw 50px 8vw;}
+  footer .serif{font-size:clamp(26px,3.6vw,42px);max-width:16ch;color:var(--cream);}
+  footer p{color:#c9beac;font-size:15px;max-width:52ch;margin-top:18px;font-weight:300;}
+  footer .handle{margin-top:28px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--accent);letter-spacing:0.05em;}
+  .btn{
+    display:inline-block;margin-top:26px;padding:16px 30px;border:1px solid var(--paper);
+    color:var(--cream);text-decoration:none;font-family:'JetBrains Mono',monospace;font-size:12px;
+    letter-spacing:0.08em;text-transform:uppercase;transition:background 0.25s ease, color 0.25s ease;
+  }
+  .btn:hover{background:var(--paper);color:var(--ink);}
+  .foot-bottom{
+    margin-top:60px;padding-top:22px;border-top:1px solid #46403a;
+    display:flex;justify-content:space-between;font-size:11px;color:#8b8378;
+    font-family:'JetBrains Mono',monospace;letter-spacing:0.05em;flex-wrap:wrap;gap:10px;
+  }
+
+  @media (max-width:860px){
+    .steps{grid-template-columns:repeat(2,1fr);}
+    .framework{grid-template-columns:repeat(2,1fr);}
+    .character, .character.reverse{grid-template-columns:1fr;gap:30px;}
+    .character.reverse .char-img{order:1;}
+    .character.reverse .char-text{order:2;}
+    .pose-grid{grid-template-columns:1fr;}
+    .video-pair{grid-template-columns:1fr;}
+    .results-grid{grid-template-columns:repeat(2,1fr);grid-auto-rows:180px;}
+    .results-grid .g1,.results-grid .g4,.results-grid .g7,.results-grid .g8{grid-column:span 2;grid-row:span 1;}
+    section{padding:64px 6vw;}
+    #cursor-preview{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+<header class="topbar">
+  <span class="wordmark">BLANC ROOM</span>
+  <span class="tag">Bastidores do processo</span>
+</header>
+
+<nav class="dotnav" id="dotnav"></nav>
+<div id="cursor-preview"></div>
+
+<!-- HERO -->
+<section class="hero navsection" id="s-hero">
+  <div class="hero-inner">
+    <span class="eyebrow">Blanc Room — guia interno</span>
+    <h1>Como criamos personagens e seus desdobramentos.</h1>
+    <p class="sub">O método por trás de cada personagem que colocamos em cena — do primeiro prompt ao vídeo final. Dois estudos de caso guiam este material: <span class="hover-trigger" data-img="assets/giovanna-hero.png">Océane</span> e <span class="hover-trigger" data-img="assets/jordana-hero.png">Larroude</span>.</p>
+  </div>
+  <div class="scrolldown"><span class="line"></span> Role para ver o processo</div>
+</section>
+
+<!-- O DESAFIO -->
+<section class="narrow reveal navsection" id="s-desafio">
+  <div class="section-head">
+    <span class="eyebrow">O desafio</span>
+    <h2 class="section-title">Uma IA sozinha não sustenta um personagem.</h2>
+  </div>
+  <p class="lede">Toda vez que se pede uma nova imagem para a IA, ela entrega uma pessoa diferente. Outro rosto, outra pele, outro olhar. Para uma campanha ou um vídeo funcionarem, cada peça precisa parecer que foi feita no mesmo dia, pela mesma equipe, com a mesma pessoa.</p>
+  <p class="lede">Este material mostra como resolvemos isso do início ao fim: da criação do personagem ao vídeo final, passando por poses, expressões e storyboard.</p>
+  <div class="note">As imagens deste material vêm de projetos conceituais do Blanc Room — Océane e Larroude. Nenhuma das duas marcas foi cliente; a direção criativa foi desenvolvida de forma independente, como estudo de caso do método.</div>
+</section>
+
+<!-- O PROCESSO -->
+<section class="reveal navsection" id="s-processo">
+  <div class="section-head">
+    <span class="eyebrow">O processo</span>
+    <h2 class="section-title">Quatro etapas, uma identidade só.</h2>
+  </div>
+  <div class="steps">
+    <div class="step"><span class="num">01</span><div><h3>Criar o Personagem</h3><p>Definimos quem vai aparecer antes de pensar em qualquer cena.</p></div></div>
+    <div class="step"><span class="num">02</span><div><h3>Poses e Expressões</h3><p>Ampliamos o personagem para múltiplas situações sem perder a identidade.</p></div></div>
+    <div class="step"><span class="num">03</span><div><h3>Storyboard</h3><p>Planejamos a sequência antes de gerar qualquer vídeo final.</p></div></div>
+    <div class="step"><span class="num">04</span><div><h3>Vídeo</h3><p>Damos movimento ao personagem, mantendo a consistência do início ao fim.</p></div></div>
+  </div>
+</section>
+
+<!-- LOGICA DOS PROMPTS -->
+<section class="reveal navsection" id="s-logica">
+  <div class="section-head">
+    <span class="eyebrow">A lógica dos prompts</span>
+    <h2 class="section-title">Menos instrução, mais direção.</h2>
+  </div>
+  <p class="lede">Não descrevemos tudo no prompt. Quanto mais se descreve, mais a IA tenta reconciliar informações conflitantes — e o resultado fica genérico. Usamos 4 elementos que direcionam sem atrapalhar:</p>
+  <div class="framework">
+    <div class="fw-card"><span class="fnum">01</span><h4>Sujeito / Objeto</h4><p>Quem aparece e como aparece.</p></div>
+    <div class="fw-card"><span class="fnum">02</span><h4>Ação</h4><p>O que está acontecendo na cena.</p></div>
+    <div class="fw-card"><span class="fnum">03</span><h4>Ambiente</h4><p>O contexto visual da cena.</p></div>
+    <div class="fw-card"><span class="fnum">04</span><h4>Estética</h4><p>A linguagem fotográfica da cena.</p></div>
+  </div>
+</section>
+
+<!-- GIOVANNA -->
+<section class="reveal navsection" id="s-giovanna">
+  <div class="character">
+    <div class="char-img"><img src="assets/giovanna-hero.png" alt="Giovanna — personagem Blanc Room"></div>
+    <div class="char-text">
+      <span class="eyebrow">Criando o personagem — 01</span>
+      <h2 class="name serif">Giovanna</h2>
+      <p>Giovanna é uma mulher brasileira negra, no início dos vinte anos, com expressão confiante e pele com glow natural. Esse foi o prompt que usamos para criar a Giovanna:</p>
+      <div class="prompt-box">
+        <span class="label">Prompt (sempre em inglês)</span>
+        Editorial studio portrait of a Brazilian woman in her mid-20s of Black descent, with natural 4b coily hair worn in a full voluminous afro with unrestrained organic shape, deep warm brown skin with a healthy luminous glow. Head slightly tilted, eyes looking directly forward with radiant playful confidence, sweet genuine smile showing teeth. Authentic skin texture with visible pores and enhanced natural features. Round face with full cheeks and strong defined jawline naturally framed by the afro volume. Full natural lips. Hair has organic unmanipulated texture. Beige studio background #fcf3eb. Editorial skincare campaign aesthetic.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- JORDANA -->
+<section class="reveal navsection" id="s-jordana">
+  <div class="character reverse">
+    <div class="char-img"><img src="assets/jordana-hero.png" alt="Jordana — personagem Blanc Room"></div>
+    <div class="char-text">
+      <span class="eyebrow">Criando o personagem — 02</span>
+      <h2 class="name serif">Jordana</h2>
+      <p>Jordana é uma mulher espanhola de 24 anos, criada para o projeto conceitual com a Larroude — pensada para carregar uma estética fashion, mais sofisticada e editorial. Esse foi o prompt que usamos para criar a Jordana:</p>
+      <div class="prompt-box">
+        <span class="label">Prompt (sempre em inglês)</span>
+        <p>24-year-old Spanish woman, Southern European features, caramel bronze skin, oval face, strong defined eyebrows, deep dark expressive eyes, chocolate brown wavy hair, wearing a plain white crew neck t-shirt.</p>
+        <p>Standing relaxed, natural gentle expression, facing the camera.</p>
+        <p>Clean white minimalist studio, seamless backdrop.</p>
+        <p>Soft diffused frontal light, fashion editorial style, natural skin rendering.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- POSES E EXPRESSÕES -->
+<section class="reveal navsection" id="s-poses">
+  <div class="section-head">
+    <span class="eyebrow">Desdobramentos — 01</span>
+    <h2 class="section-title">Poses e Expressões</h2>
+  </div>
+  <p class="lede">Depois que o personagem existe, o desafio muda. Como pedir uma pose nova, uma expressão diferente, sem a pessoa se transformar em outra pessoa?</p>
+  <p class="lede">A resposta está em como direcionamos o prompt: descrevemos a mudança — o gesto, o olhar, a emoção — e deixamos a identidade visual já estabelecida guiar o resto. Três variações que criamos para a Jordana:</p>
+  <div class="pose-grid">
+    <div>
+      <img src="assets/jordana-pose-1.jpg" alt="Jordana — expressão serena">
+      <div class="pose-name">Serena</div>
+      <div class="prompt-fw">
+        <span class="label">Prompt</span>
+        <div class="pf-row"><span class="pf-label">Sujeito</span>Same identity, eyes gently closed, soft asymmetric smile, glowing skin.</div>
+        <div class="pf-row"><span class="pf-label">Ação</span>Head tilted gently, chin lifted, facing camera directly.</div>
+        <div class="pf-row"><span class="pf-label">Ambiente</span>Seamless white studio, no props.</div>
+        <div class="pf-row"><span class="pf-label">Estética</span>Hard frontal studio light, clean editorial close-up.</div>
+      </div>
+    </div>
+    <div>
+      <img src="assets/jordana-pose-2.jpg" alt="Jordana — expressão brincalhona">
+      <div class="pose-name">Brincalhona</div>
+      <div class="prompt-fw">
+        <span class="label">Prompt</span>
+        <div class="pf-row"><span class="pf-label">Sujeito</span>Same identity, nose scrunched, asymmetric grin showing teeth, sassy sideways glance.</div>
+        <div class="pf-row"><span class="pf-label">Ação</span>Head tilted toward the raised shoulder, playful defiant attitude.</div>
+        <div class="pf-row"><span class="pf-label">Ambiente</span>Seamless white studio, no props.</div>
+        <div class="pf-row"><span class="pf-label">Estética</span>Hard frontal light, polished beauty-campaign finish.</div>
+      </div>
+    </div>
+    <div>
+      <img src="assets/jordana-pose-3.jpg" alt="Jordana — biquinho">
+      <div class="pose-name">Provocante</div>
+      <div class="prompt-fw">
+        <span class="label">Prompt</span>
+        <div class="pf-row"><span class="pf-label">Sujeito</span>Same identity, lips pursed in a playful pout, eyes gazing upward and to the side.</div>
+        <div class="pf-row"><span class="pf-label">Ação</span>Chin lifted, facing camera, light teasing spark.</div>
+        <div class="pf-row"><span class="pf-label">Ambiente</span>Seamless white studio, no props.</div>
+        <div class="pf-row"><span class="pf-label">Estética</span>Hard frontal light, fresh youthful editorial tone.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STORYBOARD -->
+<section class="reveal navsection" id="s-storyboard">
+  <div class="section-head">
+    <span class="eyebrow">Desdobramentos — 02</span>
+    <h2 class="section-title">Storyboard</h2>
+  </div>
+  <p class="lede">Antes de gerar qualquer vídeo final, desenhamos a sequência: as mesmas regras de identidade, luz e enquadramento precisam valer em todos os quadros — senão o personagem "quebra" entre uma pose e outra.</p>
+  <p class="lede">Esse é o storyboard de 5 poses que planejamos para a Jordana — a base para o morphing contínuo que vira vídeo na etapa seguinte.</p>
+  <div class="sb-sheet"><img src="assets/jordana-storyboard-sheet.jpg" alt="Storyboard de 5 poses — Jordana"></div>
+  <div class="prompt-fw">
+    <span class="label">Prompt</span>
+    <div class="pf-row"><span class="pf-label">Sujeito</span>Same character across all 5 panels — identical hair, skin tone and facial structure, no variation in identity.</div>
+    <div class="pf-row"><span class="pf-label">Ação</span>Five sequential poses — neutral front-facing, eyes closed in a soft smile, chin resting on hand, head tilted back in a pout, scrunched-nose grin — same frontal position and scale throughout.</div>
+    <div class="pf-row"><span class="pf-label">Ambiente</span>Minimalist studio, seamless white infinity background, no props, fixed camera distance and framing across all panels.</div>
+    <div class="pf-row"><span class="pf-label">Estética</span>Constant hard studio light, same direction and intensity in every panel, clean editorial beauty style.</div>
+  </div>
+</section>
+
+<!-- VIDEO -->
+<section class="reveal navsection" id="s-video">
+  <div class="section-head">
+    <span class="eyebrow">Desdobramentos — 03</span>
+    <h2 class="section-title">Criação do Vídeo</h2>
+  </div>
+  <p class="lede">Com o personagem, as poses e o storyboard definidos, o último passo é dar movimento. Transformamos as imagens estáticas em uma transição fluida entre expressões, mantendo a mesma identidade visual do início ao fim.</p>
+  <div class="video-pair">
+    <div class="vcard">
+      <video autoplay muted loop playsinline><source src="assets/giovanna-morph.mp4" type="video/mp4"></video>
+      <div class="vlabel">Giovanna — morphing contínuo</div>
+    </div>
+    <div class="vcard">
+      <video autoplay muted loop playsinline><source src="assets/jordana-morph.mp4" type="video/mp4"></video>
+      <div class="vlabel">Jordana — morphing contínuo</div>
+    </div>
+  </div>
+  <div class="prompt-fw">
+    <span class="label">Prompt (vídeo da Jordana)</span>
+    <div class="pf-row"><span class="pf-label">Sujeito</span>Same woman from the 5-panel reference sheet, consistent identity, hair and skin tone throughout.</div>
+    <div class="pf-row"><span class="pf-label">Ação</span>One continuous morph through five expressions — neutral, soft closed-eye smile, dreamy chin-on-hand, playful pucker, joyful scrunched grin — fluid, no cuts or jumps.</div>
+    <div class="pf-row"><span class="pf-label">Ambiente</span>Minimalist studio, seamless white background, locked-off static camera, no repositioning.</div>
+    <div class="pf-row"><span class="pf-label">Estética</span>Constant hard studio light, editorial motion, clean skin texture, high-end beauty campaign aesthetic.</div>
+  </div>
+</section>
+
+<!-- RESULTADOS -->
+<section class="reveal navsection" id="s-resultados">
+  <div class="section-head">
+    <span class="eyebrow">Os resultados</span>
+    <h2 class="section-title">Personagens prontos para qualquer formato.</h2>
+  </div>
+  <p class="lede">Fotos, carrosséis ou vídeo — a mesma identidade se sustenta em qualquer peça, em qualquer marca.</p>
+  <div class="results-grid">
+    <img class="g1" src="assets/jordana-result-1.jpg" alt="Resultado Jordana 1">
+    <img class="g2" src="assets/giovanna-result-1.jpg" alt="Resultado Giovanna 1">
+    <img class="g3" src="assets/resultado-bruma.png" alt="Resultado campanha Bruma">
+    <img class="g4" src="assets/jordana-result-2.jpg" alt="Resultado Jordana 2">
+    <img class="g5" src="assets/resultado-creme.png" alt="Resultado campanha Creme Hidratante">
+    <img class="g6" src="assets/giovanna-result-3.png" alt="Resultado Giovanna 3">
+    <img class="g7" src="assets/giovanna-result-2.jpg" alt="Resultado Giovanna 2">
+    <img class="g8" src="assets/jordana-result-3.jpg" alt="Resultado Jordana 3">
+  </div>
+</section>
+
+<!-- FOOTER CTA -->
+<footer class="navsection" id="s-cta">
+  <h2 class="serif">O Blanc Room é um estúdio criativo para fotos, conteúdos e produções com IA.</h2>
+  <p>Criamos personagens, campanhas e vídeos com qualidade de produção sem a logística de uma produção tradicional. Da direção criativa à entrega final.</p>
+  <div class="handle">@___blancroom</div>
+  <a class="btn" href="https://api.whatsapp.com/send?phone=5511950752197&text=Ol%C3%A1%21+Vim+das+redes+sociais+e+gostaria+de+mais+informa%C3%A7%C3%B5es+sobre+o+Blanc+Room" target="_blank" rel="noopener">Quer criar algo assim? Fala com a gente →</a>
+  <div class="foot-bottom">
+    <span>BLANC ROOM © 2026</span>
+    <span>Estudo de caso interno — não distribuir como material de cliente</span>
+  </div>
+</footer>
+
+<script>
+try {
+  const progress = document.getElementById('progress');
+  window.addEventListener('scroll', () => {
+    const h = document.documentElement;
+    const scrolled = (h.scrollTop) / (h.scrollHeight - h.clientHeight) * 100;
+    if(progress) progress.style.width = scrolled + '%';
+  });
+} catch(err) { console.warn('progress bar disabled:', err); }
+
+try {
+  if('IntersectionObserver' in window){
+    const revealEls = document.querySelectorAll('.reveal');
+    revealEls.forEach(el => el.classList.add('pending'));
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if(e.isIntersecting){
+          e.target.classList.remove('pending');
+          e.target.classList.add('in');
+          observer.unobserve(e.target);
+        }
+      });
+    }, {threshold:0.1});
+    revealEls.forEach(el => observer.observe(el));
+    setTimeout(() => {
+      document.querySelectorAll('.reveal.pending').forEach(el => {
+        el.classList.remove('pending');
+        el.classList.add('in');
+      });
+    }, 4000);
+  }
+} catch(err) {
+  console.warn('reveal animation disabled:', err);
+  document.querySelectorAll('.reveal').forEach(el => { el.classList.remove('pending'); el.classList.add('in'); });
+}
+
+try {
+  const sections = document.querySelectorAll('.navsection');
+  const dotnav = document.getElementById('dotnav');
+  if(dotnav && sections.length){
+    sections.forEach(sec => {
+      const a = document.createElement('a');
+      a.href = '#' + sec.id;
+      dotnav.appendChild(a);
+    });
+    const dots = dotnav.querySelectorAll('a');
+    if('IntersectionObserver' in window){
+      const navObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          const idx = Array.from(sections).indexOf(entry.target);
+          if(entry.isIntersecting && idx > -1 && dots[idx]){
+            dots.forEach(d => d.classList.remove('active'));
+            dots[idx].classList.add('active');
+          }
+        });
+      }, {threshold:0.5});
+      sections.forEach(sec => navObserver.observe(sec));
+    }
+  }
+} catch(err) { console.warn('dot nav disabled:', err); }
+
+try {
+  const preview = document.getElementById('cursor-preview');
+  const triggers = document.querySelectorAll('.hover-trigger');
+  if(preview && triggers.length){
+    triggers.forEach(t => {
+      t.addEventListener('mouseenter', () => {
+        preview.style.backgroundImage = `url(${t.dataset.img})`;
+        preview.classList.add('show');
+      });
+      t.addEventListener('mouseleave', () => preview.classList.remove('show'));
+    });
+    document.addEventListener('mousemove', (e) => {
+      preview.style.left = (e.clientX + 26) + 'px';
+      preview.style.top = (e.clientY - 100) + 'px';
+    });
+  }
+} catch(err) { console.warn('cursor preview disabled:', err); }
+</script>
+
+</body>
+</html>
